@@ -7,39 +7,56 @@ from main import PSOAlgorithm
 class PSOGUI:
     def __init__(self, root):
         self.root = root
-        self.root.title("Метод Роя Частиц")
+        self.root.title("Метод роя частиц")
 
-        tk.Label(self.root, text="Размер роя").grid(row=0, column=0)
-        self.num_particles_entry = self._create_entry(default_value="30", row=0, column=1)
+        params_frame = tk.LabelFrame(self.root, text="Параметры", padx=10, pady=10)
+        params_frame.grid(row=0, column=0, padx=10, pady=10)
 
-        tk.Label(self.root, text="Коэффициент текущей скорости:").grid(row=1, column=0)
-        self.w_entry = self._create_entry(default_value="0.5", row=1, column=1)
+        tk.Label(params_frame, text="Функция:").grid(row=0, column=0, sticky="w")
+        self.function_entry = tk.Entry(params_frame, width=30)
+        self.function_entry.grid(row=0, column=1)
+        self.function_entry.insert(0, "8*x1**2 + 4*x1*x2 + 5*x2**2")
+        self.function_entry.configure(state='readonly')
 
-        tk.Label(self.root, text="Коэффициент локального ускорения").grid(row=2, column=0)
-        self.c1_entry = self._create_entry(default_value="1.5", row=2, column=1)
+        tk.Label(params_frame, text="Коэфф. текущей скорости:").grid(row=1, column=0, sticky="w")
+        self.w_entry = self._create_entry(params_frame, "0.5", row=1, column=1)
 
-        tk.Label(self.root, text="Коэффициент глобального ускорения").grid(row=3, column=0)
-        self.c2_entry = self._create_entry(default_value="1.5", row=3, column=1)
+        tk.Label(params_frame, text="Коэфф. собственного лучшего значения:").grid(row=2, column=0, sticky="w")
+        self.c1_entry = self._create_entry(params_frame, "1.5", row=2, column=1)
 
-        tk.Label(self.root, text="Количество итераций:").grid(row=4, column=0)
-        self.max_iter_entry = self._create_entry(default_value="50", row=4, column=1)
+        tk.Label(params_frame, text="Коэфф. глобального лучшего значения:").grid(row=3, column=0, sticky="w")
+        self.c2_entry = self._create_entry(params_frame, "1.5", row=3, column=1)
 
-        # Добавляем флажок для включения/выключения модификации инерции
+        tk.Label(params_frame, text="Количество частиц:").grid(row=4, column=0, sticky="w")
+        self.num_particles_entry = self._create_entry(params_frame, "30", row=4, column=1)
+
+        control_frame = tk.LabelFrame(self.root, text="Управление", padx=10, pady=10)
+        control_frame.grid(row=0, column=1, padx=10, pady=10, sticky="n")
+
+        tk.Button(control_frame, text="Создать частицы", command=self.create_particles).grid(row=0, column=0, pady=5)
+        tk.Label(control_frame, text="Количество итераций:").grid(row=1, column=0, sticky="w")
+        self.max_iter_entry = self._create_entry(control_frame, "50", row=1, column=1)
+
+        tk.Button(control_frame, text="Рассчитать", command=self.run_pso).grid(row=2, column=0, pady=5)
+
+        self.iterations_label = tk.Label(control_frame, text="Количество выполненных итераций: 0")
+        self.iterations_label.grid(row=3, column=0, columnspan=2, sticky="w")
+
         self.inertia_decrease_var = tk.BooleanVar()
-        tk.Checkbutton(self.root, text="Использовать модификацию инерции", variable=self.inertia_decrease_var).grid(row=5, column=0, columnspan=2)
-
-        tk.Button(self.root, text="Рассчитать", command=self.run_pso).grid(row=6, column=0, columnspan=2)
+        tk.Checkbutton(control_frame, text="Использовать модификацию инерции", variable=self.inertia_decrease_var).grid(row=4, column=0, columnspan=2)
 
         self.figure, self.ax = plt.subplots(figsize=(5, 4))
         self.canvas = FigureCanvasTkAgg(self.figure, master=self.root)
-        self.canvas.get_tk_widget().grid(row=7, column=0)
+        self.canvas.get_tk_widget().grid(row=1, column=0, columnspan=2, padx=10, pady=10)
 
-        tk.Label(self.root, text="Результаты:").grid(row=8, column=0, columnspan=2)
-        self.result_text = tk.Text(self.root, height=5, width=40)
-        self.result_text.grid(row=9, column=0, columnspan=2)
+        results_frame = tk.LabelFrame(self.root, text="Результаты", padx=10, pady=10)
+        results_frame.grid(row=2, column=0, columnspan=2, padx=10, pady=10)
 
-    def _create_entry(self, default_value, row, column):
-        entry = tk.Entry(self.root)
+        self.result_text = tk.Text(results_frame, height=5, width=60)
+        self.result_text.pack()
+
+    def _create_entry(self, parent, default_value, row, column):
+        entry = tk.Entry(parent)
         entry.grid(row=row, column=column)
         entry.insert(0, default_value)
         return entry
@@ -52,13 +69,11 @@ class PSOGUI:
             messagebox.showerror("Ошибка", "Введите корректные значения!")
             return
 
+        # Получаем значение флажка для изменения инерции
         inertia_decrease = self.inertia_decrease_var.get()
 
-        self.algorithm = PSOAlgorithm(
-            num_particles=num_particles, 
-            max_iter=max_iter, 
-            inertia_decrease=inertia_decrease
-        )
+        # Создаем экземпляр алгоритма PSO с выбранным параметром
+        self.algorithm = PSOAlgorithm(num_particles=num_particles, max_iter=max_iter, inertia_decrease=inertia_decrease)
         self.algorithm.initialize_swarm()
         self.update_plot()
 
@@ -79,7 +94,8 @@ class PSOGUI:
             self.result_text.delete(1.0, tk.END)
             self.result_text.insert(
                 tk.END,
-                f"Лучшее положение:\nx1={global_best_position[0]}\nx2={global_best_position[1]}\nЛучшее значение: {global_best_value}\n"
+                f"Лучшее решение:\nX[0] = {global_best_position[0]}\nX[1] = {global_best_position[1]}\n"
+                f"Значение функции: {global_best_value}"
             )
 
     def update_plot(self):
@@ -87,10 +103,12 @@ class PSOGUI:
         self.ax.clear()
         self.ax.set_xlim(-5, 5)
         self.ax.set_ylim(-5, 5)
-        self.ax.scatter(positions[:, 0], positions[:, 1])
+        self.ax.scatter(positions[:, 0], positions[:, 1], label="Частицы")
         if global_best_position is not None:
-            self.ax.scatter(global_best_position[0], global_best_position[1], color='red')
+            self.ax.scatter(global_best_position[0], global_best_position[1], color='red', label="Лучшее решение")
+        self.ax.legend()
         self.ax.set_title(f'Итерация {current_iter}/{self.max_iter_entry.get()}')
+        self.iterations_label.config(text=f"Количество выполненных итераций: {current_iter}")
         self.canvas.draw()
 
 
